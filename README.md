@@ -1,51 +1,37 @@
-# DSAI3202 Lab 3 - Data Preprocessing in Azure
+# Amazon Reviews Data Pipeline
 
-This lab is a step in Assignment 1. It focuses on building a clean, enriched, and feature-ready dataset using Spark and Databricks.
+A three-notebook PySpark workflow for cleaning Amazon Electronics reviews, enriching them with product metadata, and writing a curated feature dataset to Azure Data Lake Storage.
 
-## What I did in this lab
-- Loaded raw review data into Spark, inspected schema, and handled missing/invalid values.
-- Cleaned and standardized text and rating fields so they are consistent for downstream processing.
-- Enriched reviews with metadata to add context needed for feature creation.
-- Wrote curated outputs using Parquet and Delta formats for reliable reuse in later assignments.
+**PySpark · Azure Databricks · ADLS Gen2 · Parquet**
 
-## Technologies used
-- **Apache Spark**: Distributed data processing engine used for reading, cleaning, transforming, and joining large datasets.
-- **Databricks**: Managed Spark environment where the notebooks run. It provides clusters, notebooks, and optimized storage access.
-- **Parquet**: Columnar storage format used for efficient reads and writes, especially for analytics workloads.
-- **Delta Lake (Delta)**: Storage layer on top of Parquet that adds ACID transactions, schema enforcement, and time travel.
+## Pipeline
 
-## Notebook walkthrough
+```text
+Review Parquet → validation and text cleaning → clean_reviews/
+Metadata JSON ──────────────────────────────→ product join → enriched_reviews/
+                                                           → features_v1/
+```
 
-### 01_load_and_clean_reviews.ipynb
-Purpose: Load raw reviews and produce a clean base dataset.
+| Notebook | Responsibility |
+| --- | --- |
+| [`01_load_and_clean_reviews.ipynb`](01_load_and_clean_reviews.ipynb) | Require product/reviewer IDs, valid 1–5 ratings, and meaningful review text |
+| [`02_enrich_with_metadata.ipynb`](02_enrich_with_metadata.ipynb) | Left-join product title, brand, and price by `asin`; persist enriched output |
+| [`03_write_gold_features_v1.ipynb`](03_write_gold_features_v1.ipynb) | Derive review year and write selected review/product fields as Parquet |
 
-Key steps:
-- Read the raw reviews data into a Spark DataFrame.
-- Inspect data types and basic statistics.
-- Remove or fix nulls, duplicates, and invalid values.
-- Standardize columns (for example, trimming strings and normalizing ratings).
-- Write the cleaned output to storage for later steps.
+## Run in Databricks
 
-### 02_enrich_with_metadata.ipynb
-Purpose: Combine the cleaned reviews with additional metadata.
+1. Create an Azure Databricks workspace with access to your ADLS Gen2 account.
+2. Make the reviews available as Parquet under `processed/reviews/` and the repaired metadata under `raw/meta_Electronics_fixed.json`.
+3. Import the notebooks and run them in the numbered order, in the same Python session.
+4. Set `storage_account_name` to your account name in the first notebook. Configure storage access through your workspace; do not paste account keys into notebook source.
+5. Inspect row counts, schemas, and samples after each stage.
 
-Key steps:
-- Read the cleaned reviews and metadata datasets.
-- Join on shared keys (such as product or business identifiers).
-- Select and rename columns to keep only the needed fields.
-- Validate joins and record counts after enrichment.
-- Write the enriched dataset in a durable format (Parquet or Delta).
+The [ingestion runbook](https://github.com/MohZak-AI/amazon-electronics-ingestion) describes source metadata repair. The review JSON-to-Parquet ingestion step must be completed before this pipeline begins.
 
-### 03_write_gold_features_v1.ipynb
-Purpose: Build a feature-ready dataset for analytics or ML.
+Outputs use overwrite mode. Use a dedicated development prefix before pointing the notebooks at shared storage.
 
-Key steps:
-- Read the enriched dataset.
-- Create feature columns (for example, aggregations, normalized scores, or derived text metrics).
-- Apply final filtering and schema cleanup.
-- Save the gold dataset using Delta for versioned, reliable storage.
+## Design choices and limitations
 
-## Output artifacts
-- **Cleaned reviews**: Base dataset after initial cleaning.
-- **Enriched reviews**: Cleaned reviews joined with metadata.
-- **Gold features (v1)**: Final feature set stored as Delta for Assignment 1.
+The metadata join retains reviews without matching product records. Missing product fields remain null. Metadata is expected to contain at most one row per `asin`; duplicate metadata keys can multiply review rows and should be checked before running.
+
+The stored outputs are **Parquet**. This implementation does not claim Delta Lake transactions or time travel. Storage resources and source datasets are not bundled.
