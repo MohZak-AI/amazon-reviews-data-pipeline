@@ -22,8 +22,8 @@ Metadata JSON ──────────────────────
 
 1. Create an Azure Databricks workspace with access to your ADLS Gen2 account.
 2. Make the reviews available as Parquet under `processed/reviews/` and the repaired metadata under `raw/meta_Electronics_fixed.json`.
-3. Import the notebooks and run them in the numbered order, in the same Python session.
-4. Set `storage_account_name` to your account name in the first notebook. Configure storage access through your workspace; do not paste account keys into notebook source.
+3. Import the notebooks and run them in the numbered order. Each stage reads the preceding stage from storage.
+4. Set `storage_account_name` to the same account name in each notebook. Configure storage access through your workspace; do not paste account keys into notebook source.
 5. Inspect row counts, schemas, and samples after each stage.
 
 The [ingestion runbook](https://github.com/MohZak-AI/amazon-electronics-ingestion) describes source metadata repair. The review JSON-to-Parquet ingestion step must be completed before this pipeline begins.
